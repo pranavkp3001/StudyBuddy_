@@ -151,7 +151,11 @@ export default function ChatBox({
     } catch {
       setChat((prev) => [
         ...prev,
-        { role: "bot", content: "Failed to load YouTube video.", timestamp: new Date() },
+        {
+          role: "bot",
+          content: "Failed to load YouTube video.",
+          timestamp: new Date(),
+        },
       ]);
     } finally {
       setYoutubeLoading(false);
@@ -244,7 +248,9 @@ export default function ChatBox({
       </div>
       <button
         type="button"
-        className={"chat-robot-launcher" + (mode === "web_search" ? " active" : "")}
+        className={
+          "chat-robot-launcher" + (mode === "web_search" ? " active" : "")
+        }
         onClick={() => setMode("web_search")}
         disabled={loading}
         title="Ask the robot to search the web"
