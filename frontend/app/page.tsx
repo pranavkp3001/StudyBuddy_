@@ -114,95 +114,94 @@ export default function Home() {
                   <span>Your Documents</span>
                   <span className="doc-count-pill">{docs.length}</span>
                 </div>
-              </div>
-
-              <div className="doc-panel-controls">
-                <input
-                  className="doc-search-input"
-                  placeholder="Search documents..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
-                <FileUploader
-                  onUploaded={handleDocumentChange}
-                  existingNames={docs.map((d) => d.name)}
-                  activeDocName={docName}
-                />
-              </div>
-
-              {docs.length > 0 && (
-                <div className="doc-list-grid">
-                  {filteredDocs.map((d) => (
-                    <div
-                      key={d.id}
-                      className={
-                        "doc-row" + (d.id === docId ? " doc-row-active" : "")
-                      }
-                    >
-                      <button
-                        type="button"
-                        className="doc-row-main"
-                        onClick={() => {
-                          setDocId(d.id);
-                          setDocName(d.name);
-                        }}
-                      >
-                        <span className="doc-row-main-left">
-                          <span
-                            className={
-                              "doc-radio" +
-                              (d.id === docId ? " doc-radio-active" : "")
-                            }
-                          />
-                          <span className="doc-file-icon">📄</span>
-                          <span className="doc-name">{d.name}</span>
-                        </span>
-                        {d.id === docId && (
-                          <span className="doc-inuse-badge">In use</span>
-                        )}
-                      </button>
-                      <button
-                        type="button"
-                        className="doc-row-delete"
-                        onClick={() => handleDeleteDocument(d.id)}
-                        aria-label="Delete document"
-                      >
-                        <svg
-                          viewBox="0 0 24 24"
-                          aria-hidden="true"
-                          className="doc-row-delete-icon"
-                        >
-                          <path
-                            d="M8 4.5c0-.83.67-1.5 1.5-1.5h5c.83 0 1.5.67 1.5 1.5V6h3v2H5V6h3V4.5Z"
-                            fill="currentColor"
-                          />
-                          <path
-                            d="M7 8h10l-.7 9.2A2 2 0 0 1 14.32 19H9.68A2 2 0 0 1 7.7 17.2L7 8Z"
-                            fill="currentColor"
-                          />
-                          <rect
-                            x="10"
-                            y="10"
-                            width="1.6"
-                            height="6"
-                            rx="0.8"
-                            fill="#fef2f2"
-                          />
-                          <rect
-                            x="12.4"
-                            y="10"
-                            width="1.6"
-                            height="6"
-                            rx="0.8"
-                            fill="#fef2f2"
-                          />
-                        </svg>
-                      </button>
-                    </div>
-                  ))}
+                <div className="doc-panel-controls">
+                  <input
+                    className="doc-search-input"
+                    placeholder="Search documents..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                  />
+                  <FileUploader
+                    onUploaded={handleDocumentChange}
+                    existingNames={docs.map((d) => d.name)}
+                    activeDocName={docName}
+                  />
                 </div>
-              )}
+              </div>
             </div>
+
+            {docs.length > 0 && (
+              <div className="doc-list-grid">
+                {filteredDocs.map((d) => (
+                  <div
+                    key={d.id}
+                    className={
+                      "doc-row" + (d.id === docId ? " doc-row-active" : "")
+                    }
+                  >
+                    <button
+                      type="button"
+                      className="doc-row-main"
+                      onClick={() => {
+                        setDocId(d.id);
+                        setDocName(d.name);
+                      }}
+                    >
+                      <span className="doc-row-main-left">
+                        <span
+                          className={
+                            "doc-radio" +
+                            (d.id === docId ? " doc-radio-active" : "")
+                          }
+                        />
+                        <span className="doc-file-icon">📄</span>
+                        <span className="doc-name">{d.name}</span>
+                      </span>
+                      {d.id === docId && (
+                        <span className="doc-inuse-badge">In use</span>
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      className="doc-row-delete"
+                      onClick={() => handleDeleteDocument(d.id)}
+                      aria-label="Delete document"
+                    >
+                      <svg
+                        viewBox="0 0 24 24"
+                        aria-hidden="true"
+                        className="doc-row-delete-icon"
+                      >
+                        <path
+                          d="M8 4.5c0-.83.67-1.5 1.5-1.5h5c.83 0 1.5.67 1.5 1.5V6h3v2H5V6h3V4.5Z"
+                          fill="currentColor"
+                        />
+                        <path
+                          d="M7 8h10l-.7 9.2A2 2 0 0 1 14.32 19H9.68A2 2 0 0 1 7.7 17.2L7 8Z"
+                          fill="currentColor"
+                        />
+                        <rect
+                          x="10"
+                          y="10"
+                          width="1.6"
+                          height="6"
+                          rx="0.8"
+                          fill="#fef2f2"
+                        />
+                        <rect
+                          x="12.4"
+                          y="10"
+                          width="1.6"
+                          height="6"
+                          rx="0.8"
+                          fill="#fef2f2"
+                        />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </section>
       </div>
