@@ -224,17 +224,6 @@ export default function ChatBox({
         <button
           type="button"
           className={
-            "chat-mode-pill" + (mode === "web_search" ? " active" : "")
-          }
-          onClick={() => setMode("web_search")}
-          disabled={loading}
-          title="Search the web for answers"
-        >
-          🌐 Web Search
-        </button>
-        <button
-          type="button"
-          className={
             "chat-mode-pill" + (mode === "ui_generator" ? " active" : "")
           }
           onClick={() => setMode("ui_generator")}
@@ -253,6 +242,21 @@ export default function ChatBox({
           📺 YouTube
         </button>
       </div>
+      <button
+        type="button"
+        className={"chat-robot-launcher" + (mode === "web_search" ? " active" : "")}
+        onClick={() => setMode("web_search")}
+        disabled={loading}
+        title="Ask the robot to search the web"
+        aria-label="Open web search robot"
+      >
+        🤖
+      </button>
+      {mode === "web_search" && (
+        <div className="chat-status-banner">
+          <span>🌐 Web Search is active</span>
+        </div>
+      )}
       {mode === "youtube" && (
         <div className="chat-youtube-row">
           <div className="chat-youtube-field">
