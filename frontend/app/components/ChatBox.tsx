@@ -1,0 +1,356 @@
+import { useState, useRef, useEffect } from "react";
+import axios from "axios";
+
+const API = process.env.NEXT_PUBLIC_API_URL!;
+
+type ChatMessage = {
+  role: "user" | "bot";
+  content: string;
+  timestamp: Date;
+};
+
+type ChatBoxProps = {
+  docId?: string | null;
+  docName?: string | null;
+  onDocumentChange?: (docId: string, fileName: string) => void;
+  existingNames?: string[];
+};
+
+const urlRegex = /(https?:\/\/[^\s]+)/g;
+
+function renderMessageContent(text: string) {
+  const parts = text.split(urlRegex);
+  return parts.map((part, index) => {
+    if (part.startsWith("http://") || part.startsWith("https://")) {
+      return (
+        <a
+          key={index}
+          href={part}
+          target="_blank"
+          rel="noreferrer"
+          className="chat-link"
+        >
+          {part}
+        </a>
+      );
+    }
+    return <span key={index}>{part}</span>;
+  });
+}
+
+export default function ChatBox({
+  docId,
+  docName,
+  onDocumentChange,
+  existingNames,
+}: ChatBoxProps) {
+  const [msg, setMsg] = useState("");
+  const [chat, setChat] = useState<ChatMessage[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [mode, setMode] = useState<
+    "rag" | "web_search" | "ui_generator" | "youtube"
+  >("rag");
+  const [youtubeUrl, setYoutubeUrl] = useState("");
+  const [youtubeLoading, setYoutubeLoading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const chatEndRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (chatEndRef.current) {
+      chatEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [chat]);
+
+  const send = async () => {
+    const trimmed = msg.trim();
+    if (!trimmed || loading || uploadingImage) return;
+
+    const userMessage: ChatMessage = {
+      role: "user",
+      content: trimmed,
+      timestamp: new Date(),
+    };
+    setChat((prev) => [...prev, userMessage]);
+    setMsg("");
+    setLoading(true);
+
+    try {
+      const res = await axios.post(`${API}/chat`, {
+        message: trimmed,
+        doc_id: docId,
+        mode,
+      });
+      const botMessage: ChatMessage = {
+        role: "bot",
+        content: res.data.response ?? "No response received.",
+        timestamp: new Date(),
+      };
+      setChat((prev) => [...prev, botMessage]);
+    } catch (err) {
+      setChat((prev) => [
+        ...prev,
+        {
+          role: "bot",
+          content: "Something went wrong while contacting the server.",
+          timestamp: new Date(),
+        },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    send();
+  };
+
+  const ingestYoutube = async () => {
+    const url = youtubeUrl.trim();
+    if (!url || youtubeLoading) return;
+
+    setYoutubeLoading(true);
+    try {
+      const res = await axios.post(`${API}/youtube_ingest`, { url });
+      const data = res.data as {
+        doc_id?: string;
+        title?: string;
+        summary?: string;
+        error?: string;
+      };
+
+      if (data.error) {
+        setChat((prev) => [
+          ...prev,
+          {
+            role: "bot",
+            content: `YouTube error: ${data.error}`,
+            timestamp: new Date(),
+          },
+        ]);
+        return;
+      }
+
+      if (data.doc_id && onDocumentChange) {
+        onDocumentChange(data.doc_id, data.title ?? url);
+      }
+
+      if (data.summary) {
+        setChat((prev) => [
+          ...prev,
+          {
+            role: "bot",
+            content: `Loaded YouTube video${data.title ? `: ${data.title}` : ""}.\n\nSummary:\n${data.summary}`,
+            timestamp: new Date(),
+          },
+        ]);
+      }
+
+      setYoutubeUrl("");
+    } catch {
+      setChat((prev) => [
+        ...prev,
+        { role: "bot", content: "Failed to load YouTube video." },
+      ]);
+    } finally {
+      setYoutubeLoading(false);
+    }
+  };
+
+  const openImagePicker = () => {
+    if (loading || uploadingImage || youtubeLoading) return;
+    fileInputRef.current?.click();
+  };
+
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || youtubeLoading) return;
+
+    if (existingNames && existingNames.includes(file.name)) {
+      alert("This document has already been uploaded.");
+      return;
+    }
+
+    const form = new FormData();
+    form.append("file", file);
+
+    setUploadingImage(true);
+    try {
+      const res = await axios.post(`${API}/upload`, form);
+      const data = res.data as { doc_id?: string; file_name?: string };
+      if (data.doc_id && onDocumentChange) {
+        onDocumentChange(data.doc_id, data.file_name ?? file.name);
+      }
+      setChat((prev) => [
+        ...prev,
+        {
+          role: "bot",
+          content: `Image "${file.name}" uploaded. Ask a question about this image or document.`,
+          timestamp: new Date(),
+        },
+      ]);
+    } catch {
+      setChat((prev) => [
+        ...prev,
+        { role: "bot", content: "Image upload failed.", timestamp: new Date() },
+      ]);
+    } finally {
+      setUploadingImage(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
+  return (
+    <div className="chat-box">
+      {docName && mode === "rag" && (
+        <p className="chat-empty" style={{ marginBottom: 4 }}>
+          Answering using: <strong>{docName}</strong>
+        </p>
+      )}
+      <div className="chat-mode-row">
+        <span className="chat-mode-label">Source:</span>
+        <button
+          type="button"
+          className={"chat-mode-pill" + (mode === "rag" ? " active" : "")}
+          onClick={() => setMode("rag")}
+          disabled={loading}
+          title="Answer questions using uploaded documents"
+        >
+          📄 Documents
+        </button>
+        <button
+          type="button"
+          className={
+            "chat-mode-pill" + (mode === "web_search" ? " active" : "")
+          }
+          onClick={() => setMode("web_search")}
+          disabled={loading}
+          title="Search the web for answers"
+        >
+          🌐 Web Search
+        </button>
+        <button
+          type="button"
+          className={
+            "chat-mode-pill" + (mode === "ui_generator" ? " active" : "")
+          }
+          onClick={() => setMode("ui_generator")}
+          disabled={loading}
+          title="Generate UI components based on description"
+        >
+          🎨 UI Generator
+        </button>
+        <button
+          type="button"
+          className={"chat-mode-pill" + (mode === "youtube" ? " active" : "")}
+          onClick={() => setMode("youtube")}
+          disabled={loading}
+          title="Load and ask questions about YouTube videos"
+        >
+          📺 YouTube
+        </button>
+      </div>
+      {mode === "youtube" && (
+        <div className="chat-youtube-row">
+          <div className="chat-youtube-field">
+            <div className="chat-youtube-label">YouTube video URL</div>
+            <input
+              className="chat-youtube-input"
+              placeholder="Paste YouTube URL to index the video..."
+              value={youtubeUrl}
+              onChange={(e) => setYoutubeUrl(e.target.value)}
+            />
+          </div>
+          <button
+            type="button"
+            className="chat-youtube-btn"
+            onClick={ingestYoutube}
+            disabled={!youtubeUrl.trim() || youtubeLoading}
+          >
+            {youtubeLoading ? "Loading..." : "Load video"}
+          </button>
+        </div>
+      )}
+      <div className="chat-messages">
+        {chat.length === 0 && (
+          <p className="chat-empty">
+            Ask a question about your uploaded document to get started.
+          </p>
+        )}
+        {chat.map((m, i) => (
+          <div
+            key={i}
+            className={`message-row ${m.role === "user" ? "message-row-user" : "message-row-bot"}`}
+          >
+            <div className="message-avatar">
+              {m.role === "user" ? "👤" : "🤖"}
+            </div>
+            <div className={`message-bubble message-bubble-${m.role}`}>
+              <p className="message-text">{renderMessageContent(m.content)}</p>
+              <span className="message-timestamp">
+                {m.timestamp.toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </span>
+            </div>
+          </div>
+        ))}
+        {loading && (
+          <div className="message-row message-row-bot">
+            <div className="message-avatar">🤖</div>
+            <div className="message-bubble message-bubble-bot message-typing">
+              <div className="typing-indicator">
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+            </div>
+          </div>
+        )}
+        <div ref={chatEndRef} />
+      </div>
+      <form className="chat-input-row" onSubmit={handleSubmit}>
+        <input
+          className="chat-input"
+          placeholder={
+            mode === "web_search"
+              ? "Search the web with AI..."
+              : mode === "ui_generator"
+                ? "Describe the UI component you want (e.g. a login card)..."
+                : mode === "youtube"
+                  ? "Ask a question about this YouTube video..."
+                  : "Ask a question about your document..."
+          }
+          value={msg}
+          onChange={(e) => setMsg(e.target.value)}
+        />
+        <button
+          type="button"
+          className="chat-attach-btn"
+          onClick={openImagePicker}
+          disabled={loading || uploadingImage || youtubeLoading}
+        >
+          {uploadingImage ? "📤 Uploading..." : "📎 Add image"}
+        </button>
+        <button
+          type="submit"
+          className="chat-send-btn"
+          disabled={!msg.trim() || loading || uploadingImage || youtubeLoading}
+        >
+          {loading ? "🤔 Thinking..." : "➤ Send"}
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleImageChange}
+          style={{ display: "none" }}
+        />
+      </form>
+    </div>
+  );
+}
