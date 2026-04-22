@@ -151,7 +151,7 @@ export default function ChatBox({
     } catch {
       setChat((prev) => [
         ...prev,
-        { role: "bot", content: "Failed to load YouTube video." },
+        { role: "bot", content: "Failed to load YouTube video.", timestamp: new Date() },
       ]);
     } finally {
       setYoutubeLoading(false);
